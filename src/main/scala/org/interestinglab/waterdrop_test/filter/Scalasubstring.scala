@@ -48,8 +48,8 @@ class Scalasubstring(var config: Config) extends BaseFilter(config) {
 
     val srcField = config.getString("source_field")
     val targetField = config.getString("target_field")
-    val pos = config.getInt("fields")
-    val len = config.getInt("fields")
+    val pos = config.getInt("pos")
+    val len = config.getInt("len")
     df.withColumn(targetField, substring(col(srcField), pos, len))
   }
 
