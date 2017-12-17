@@ -21,6 +21,7 @@ public class Javasubstring extends BaseFilter {
 
     public Javasubstring(Config config) {
         super (config);
+        this.config = config;
     }
 
     @Override
@@ -28,8 +29,6 @@ public class Javasubstring extends BaseFilter {
         if(!config.hasPath("len")) {
             return new Tuple2<>(false, "please specify [len]");
         }
-        System.out.println("works");
-        System.out.println(new Tuple2<>(true, ""));
         return new Tuple2<>(true, "");
     }
 
@@ -49,8 +48,8 @@ public class Javasubstring extends BaseFilter {
     public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {
         String srcField = config.getString("source_field");
         String targetField = config.getString("target_field");
-        int pos = config.getInt("fields");
-        int len = config.getInt("fields");
+        int pos = config.getInt("pos");
+        int len = config.getInt("len");
         return df.withColumn(targetField, substring(col(srcField), pos, len));
     }
 }
