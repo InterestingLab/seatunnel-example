@@ -18,11 +18,9 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>org.interestinglab.waterdrop</groupId>
+            <groupId>io.github.interestinglab.waterdrop</groupId>
             <artifactId>waterdrop-apis_2.11</artifactId>
             <version>${waterdrop.version}</version>
-            <scope>system</scope>
-            <systemPath>D:\project\waterdrop-apis_2.11-0.1.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.typesafe</groupId>

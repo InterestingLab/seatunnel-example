@@ -6,7 +6,7 @@ import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.substring;
-import org.interestinglab.waterdrop.apis.BaseFilter;
+import io.github.interestinglab.waterdrop.apis.BaseFilter;
 
 import com.typesafe.config.Config;
 import org.apache.spark.streaming.StreamingContext;
