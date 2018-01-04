@@ -1,4 +1,4 @@
-package org.interestinglab.waterdrop_test.filter
+package org.interestinglab.waterdrop.filter
 
 import io.github.interestinglab.waterdrop.apis.BaseFilter
 import com.typesafe.config.{Config, ConfigFactory}
