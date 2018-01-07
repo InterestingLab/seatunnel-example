@@ -8,7 +8,7 @@ import org.apache.spark.streaming.StreamingContext
 
 import scala.collection.JavaConversions._
 
-class Scalasubstring(var config: Config) extends BaseFilter(config) {
+class ScalaSubstring(var config: Config) extends BaseFilter(config) {
 
   def this() {
     this(ConfigFactory.empty())

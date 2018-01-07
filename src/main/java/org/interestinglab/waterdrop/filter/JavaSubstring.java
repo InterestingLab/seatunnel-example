@@ -15,11 +15,11 @@ import scala.Tuple2;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Javasubstring extends BaseFilter {
+public class JavaSubstring extends BaseFilter {
 
     private Config config;
 
-    public Javasubstring(Config config) {
+    public JavaSubstring(Config config) {
         super (config);
         this.config = config;
     }

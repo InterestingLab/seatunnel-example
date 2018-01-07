@@ -6,7 +6,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
-class Scalahdfs(config: Config) extends BaseInput(config) {
+class ScalaHdfs(config: Config) extends BaseInput(config) {
 
   override def checkConfig(): (Boolean, String) = {
     config.hasPath("path") match {
