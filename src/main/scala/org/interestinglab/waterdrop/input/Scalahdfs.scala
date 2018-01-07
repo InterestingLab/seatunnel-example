@@ -2,6 +2,7 @@ package org.interestinglab.waterdrop.input
 
 import com.typesafe.config.Config
 import io.github.interestinglab.waterdrop.apis.BaseInput
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
@@ -24,6 +25,11 @@ class Scalahdfs(config: Config) extends BaseInput(config) {
       }
       case false => (false, "please specify [path] as non-empty string")
     }
+  }
+
+  override def prepare(spark: SparkSession, ssc: StreamingContext): Unit = {
+
+    super.prepare(spark, ssc)
   }
 
   override def getDStream(ssc: StreamingContext): DStream[(String, String)] = {
