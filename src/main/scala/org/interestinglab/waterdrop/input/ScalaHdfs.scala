@@ -1,12 +1,27 @@
 package org.interestinglab.waterdrop.input
 
-import com.typesafe.config.Config
-import io.github.interestinglab.waterdrop.apis.BaseInput
-import org.apache.spark.sql.SparkSession
+import com.typesafe.config.{Config, ConfigFactory}
+import io.github.interestinglab.waterdrop.apis.BaseStreamingInput
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
-class ScalaHdfs(config: Config) extends BaseInput(config) {
+class ScalaHdfs extends BaseStreamingInput {
+
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
+  }
 
   override def checkConfig(): (Boolean, String) = {
     config.hasPath("path") match {
@@ -27,14 +42,11 @@ class ScalaHdfs(config: Config) extends BaseInput(config) {
     }
   }
 
-  override def prepare(spark: SparkSession, ssc: StreamingContext): Unit = {
-
-    super.prepare(spark, ssc)
-  }
-
   override def getDStream(ssc: StreamingContext): DStream[(String, String)] = {
 
-    ssc.textFileStream(config.getString("path")).map(s => { ("", s) })
+    ssc.textFileStream(config.getString("path")).map(s => {
+      ("", s)
+    })
   }
 
 }

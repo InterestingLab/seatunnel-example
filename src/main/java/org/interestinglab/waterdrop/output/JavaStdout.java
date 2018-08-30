@@ -16,8 +16,13 @@ public class JavaStdout extends BaseOutput {
 
     private Config config;
 
-    public JavaStdout(Config config) {
-        super(config);
+    @Override
+    public Config getConfig() {
+        return config;
+    }
+
+    @Override
+    public void setConfig(Config config) {
         this.config = config;
     }
 
@@ -31,7 +36,7 @@ public class JavaStdout extends BaseOutput {
     }
 
     @Override
-    public void prepare(SparkSession spark, StreamingContext ssc) {
+    public void prepare(SparkSession spark) {
         Map<String, Object> map = new HashMap();
         map.put("limit", 100);
         Config defaultConfig = ConfigFactory.parseMap(map);

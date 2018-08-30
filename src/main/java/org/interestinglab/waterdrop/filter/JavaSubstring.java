@@ -4,12 +4,13 @@ import com.typesafe.config.ConfigFactory;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+
 import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.substring;
+
 import io.github.interestinglab.waterdrop.apis.BaseFilter;
 
 import com.typesafe.config.Config;
-import org.apache.spark.streaming.StreamingContext;
 import scala.Tuple2;
 
 import java.util.HashMap;
@@ -19,21 +20,26 @@ public class JavaSubstring extends BaseFilter {
 
     private Config config;
 
-    public JavaSubstring(Config config) {
-        super (config);
+    @Override
+    public Config getConfig() {
+        return config;
+    }
+
+    @Override
+    public void setConfig(Config config) {
         this.config = config;
     }
 
     @Override
     public Tuple2<Object, String> checkConfig() {
-        if(!config.hasPath("len")) {
+        if (!config.hasPath("len")) {
             return new Tuple2<>(false, "please specify [len]");
         }
         return new Tuple2<>(true, "");
     }
 
     @Override
-    public void prepare(SparkSession spark, StreamingContext ssc) {
+    public void prepare(SparkSession spark) {
 
         Map<String, Object> map = new HashMap();
         map.put("source_field", "raw_message");

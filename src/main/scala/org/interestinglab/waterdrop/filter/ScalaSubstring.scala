@@ -2,27 +2,38 @@ package org.interestinglab.waterdrop.filter
 
 import io.github.interestinglab.waterdrop.apis.BaseFilter
 import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{substring, col}
-import org.apache.spark.streaming.StreamingContext
+import org.apache.spark.sql.{Row, Dataset, SparkSession}
+import org.apache.spark.sql.functions.{col, substring}
 
 import scala.collection.JavaConversions._
 
-class ScalaSubstring(var config: Config) extends BaseFilter(config) {
+class ScalaSubstring extends BaseFilter {
 
-  def this() {
-    this(ConfigFactory.empty())
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
   }
 
   override def checkConfig(): (Boolean, String) = {
 
     val requiredOptions = List("source_field", "len")
-    val nonExistsOptions:List[(String, Boolean)] = requiredOptions.map{ optionName =>
+    val nonExistsOptions: List[(String, Boolean)] = requiredOptions.map { optionName =>
       (optionName, config.hasPath(optionName))
     }.filter { p =>
       val (optionName, exists) = p
-        !exists
-      }
+      !exists
+    }
 
     if (nonExistsOptions.length == 0) {
       (true, "")
@@ -31,7 +42,7 @@ class ScalaSubstring(var config: Config) extends BaseFilter(config) {
     }
   }
 
-  override def prepare(spark: SparkSession, ssc: StreamingContext): Unit = {
+  override def prepare(spark: SparkSession): Unit = {
 
     val defaultConfig = ConfigFactory.parseMap(
       Map(
@@ -44,7 +55,7 @@ class ScalaSubstring(var config: Config) extends BaseFilter(config) {
     config = config.withFallback(defaultConfig)
   }
 
-  override def process(spark: SparkSession, df: DataFrame): DataFrame = {
+  override def process(spark: SparkSession, df: Dataset[Row]): Dataset[Row] = {
 
     val srcField = config.getString("source_field")
     val targetField = config.getString("target_field")
