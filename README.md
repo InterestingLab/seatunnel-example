@@ -32,26 +32,40 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
 <dependency>
     <groupId>io.github.interestinglab.waterdrop</groupId>
     <artifactId>waterdrop-apis_2.11</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
 ## 二、 实现自己的方法
 
-### Input
+### Input(实时流)
 
 - 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseInput`
     ```scala
-    class ScalaHdfs(config: Config) extends BaseInput(config) {
-    }
+    class ScalaHdfs extends BaseStreamingInput {
+    
+      var config: Config = ConfigFactory.empty()
+    
+      /**
+        * Set Config.
+        **/
+      override def setConfig(config: Config): Unit = {
+        this.config = config
+      }
+    
+      /**
+        * Get Config.
+        **/
+      override def getConfig(): Config = {
+        this.config
+      }
     ```
 - 重写父类定义的`checkConfig`、`prepare`和`getDstream`方法
     ```scala
-    class ScalaHdfs(config: Config) extends BaseInput(config) {
-        override def checkConfig(): (Boolean, String) = {}
-        override def prepare(spark: SparkSession, ssc: StreamingContext): Unit = {}
-        override def getDStream(ssc: StreamingContext): DStream[(String, String)] = {}
-    }
+    override def checkConfig(): (Boolean, String) = {}
+    override def prepare(spark: SparkSession): Unit = {}
+    override def getDStream(ssc: StreamingContext): DStream[(String, String)] = {}
+  
     ```
 - **Input**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`getStream`方法将外部数据源转换为`DStream[(String, String)]`
 - Scala版本**Input**插件实现参照[ScalaHdfs](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/input/ScalaHdfs.scala)
@@ -61,91 +75,113 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
 
 - 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseFilter`
     ```Scala
-    class ScalaSubstring(var config: Config) extends BaseFilter(config) {
-        def this() {
-            this(ConfigFactory.empty())
-        }
+    class ScalaSubstring extends BaseFilter {
+    
+      var config: Config = ConfigFactory.empty()
+    
+      /**
+        * Set Config.
+        **/
+      override def setConfig(config: Config): Unit = {
+        this.config = config
+      }
+    
+      /**
+        * Get Config.
+        **/
+      override def getConfig(): Config = {
+        this.config
+      }
     }
     ```
     ```Java
     public class JavaSubstring extends BaseFilter {
+    
         private Config config;
-        public Javasubstring(Config config) {
-            super (config);
+    
+        @Override
+        public Config getConfig() {
+            return config;
+        }
+    
+        @Override
+        public void setConfig(Config config) {
             this.config = config;
         }
     }
     ```
 - 重写父类定义的`checkConfig`、`prepare`和`process`方法
     ```Scala
-    class ScalaSubstring(var config: Config) extends BaseFilter(config) {
-        def this() {
-            this(ConfigFactory.empty())
-        }
-        override def checkConfig(): (Boolean, String) = {}
-        override def prepare(spark: SparkSession, ssc: StreamingContext): Unit = {}
-        override def process(spark: SparkSession, df: DataFrame): DataFrame = {}
-    }
+    override def checkConfig(): (Boolean, String) = {}
+    override def prepare(spark: SparkSession): Unit = {}
+    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
     ```
     ```Java
-    public class JavaSubstring extends BaseFilter {
-        private Config config;
-        public Javasubstring(Config config) {
-            super (config);
-            this.config = config;
-        }
-        @Override
-        public Tuple2<Object, String> checkConfig() {}
-        @Override
-        public void prepare(SparkSession spark, StreamingContext ssc) {}
-        @Override
-        public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
-    }
-
+    @Override
+    public Tuple2<Object, String> checkConfig() {}
+    @Override
+    public void prepare(SparkSession spark, StreamingContext ssc) {}
+    @Override
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
     ```
-    - **Filter**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法对Dataframe格式数据进行处理。
+    - **Filter**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法对 **Dataset[Row]** 格式数据进行处理。
     - Java版本**Filter**插件的实现参照[JavaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/filter/JavaSubstring.java)，Scala版本**Filter**插件的实现参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala)
 
 ### Output
 
 - 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseOutput`
     ```Scala
-    class ScalaStdout(var config: Config) extends BaseOutput(config) {}
+    class ScalaStdout extends BaseOutput {
+    
+    
+      var config: Config = ConfigFactory.empty()
+    
+      /**
+        * Set Config.
+        **/
+      override def setConfig(config: Config): Unit = {
+        this.config = config
+      }
+    
+      /**
+        * Get Config.
+        **/
+      override def getConfig(): Config = {
+        this.config
+      }
+    }
     ```
     ```Java
     public class JavaStdout extends BaseOutput {
+    
         private Config config;
-        public Javasubstring(Config config) {
-            super (config);
+    
+        @Override
+        public Config getConfig() {
+            return config;
+        }
+    
+        @Override
+        public void setConfig(Config config) {
             this.config = config;
         }
     }
     ```
 - 重写父类定义的`checkConfig`、`prepare`和`process`方法
     ```Scala
-    class ScalaStdout(var config: Config) extends BaseOutput(config) {
-        override def checkConfig(): (Boolean, String) = {}
-        override def prepare(spark: SparkSession, ssc: StreamingContext): Unit = {}
-        override def process(spark: SparkSession, df: DataFrame): DataFrame = {}
-    }
+    override def checkConfig(): (Boolean, String) = {}
+    override def prepare(spark: SparkSession): Unit = {}
+    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
     ```
     ```Java
-    public class JavaStdout extends BaseOutput {
-        private Config config;
-        public JavaStdout(Config config) {
-            super (config);
-            this.config = config;
-        }
-        @Override
-        public Tuple2<Object, String> checkConfig() {}
-        @Override
-        public void prepare(SparkSession spark, StreamingContext ssc) {}
-        @Override
-        public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
-    }
-
+    @Override
+    public Tuple2<Object, String> checkConfig() {}
+    @Override
+    public void prepare(SparkSession spark) {}
+    @Override
+    public Dataset<Row> process(SparkSession spark, Dataset<Row> ds) {}
     ```
-    - **Output**插件调用结构与**Filter**插件相似。在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法将Dataframe格式数据输出到外部数据源。
+    - **Output**插件调用结构与**Filter**插件相似。在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法将 **Dataset[Row]** 格式数据输出到外部数据源。
     - Java版本**Output**插件的实现参照[JavaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/output/JavaStdout.java)，Scala版本**Output**插件的实现参照[ScalaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/output/ScalaStdout.scala)
 
 
@@ -156,7 +192,7 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
 
 2. 将打包好的Jar包放到Waterdrop `plugins`目录下
     ```shell
-    cd waterdrop-1.0.2
+    cd waterdrop-1.1.0
     mkdir -p plugins/my_plugins/lib
     cd plugins/my_plugins/lib
     ```
@@ -211,7 +247,7 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
 
 4. 启动Waterdrop
 ```
-./bin/start-waterdrop.sh
+./bin/start-waterdrop.sh --config config/application.conf --deploy-mode client --master local[2]
 ```
 
 5. 查看结果
