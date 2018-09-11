@@ -184,6 +184,40 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
     - **Output**插件调用结构与**Filter**插件相似。在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法将 **Dataset[Row]** 格式数据输出到外部数据源。
     - Java版本**Output**插件的实现参照[JavaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/output/JavaStdout.java)，Scala版本**Output**插件的实现参照[ScalaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/output/ScalaStdout.scala)
 
+### UDF
+
+- 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseFilter`
+    ```Scala
+    class ScalaSubstring extends BaseFilter {
+    
+      var config: Config = ConfigFactory.empty()
+    
+      /**
+        * Set Config.
+        **/
+      override def setConfig(config: Config): Unit = {
+        this.config = config
+      }
+    
+      /**
+        * Get Config.
+        **/
+      override def getConfig(): Config = {
+        this.config
+      }
+    }
+    ```
+- 重写父类定义的`checkConfig`、`prepare`、`getUdfList`和`process`方法,这里只介绍`getUdfList`以及`process`两个方法
+    ```Scala
+    override def getUdfList(): List[(String, UserDefinedFunction)] = {}
+    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
+    ```
+    具体UDF插件开发案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
+- 新建META-INF/services
+
+    Waterdrop会利用**Service loader**机制将实现`io.github.interestinglab.waterdrop.apis.BaseFilter`的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
+    
+    案例中的[META-INF](https://github.com/InterestingLab/waterdrop-example/blob/master/src/main/resources/META-INF/services/io.github.interestinglab.waterdrop.apis.BaseFilter)
 
 ## 三、 打包使用
 
@@ -197,7 +231,7 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
     cd plugins/my_plugins/lib
     ```
 
-    Waterdrop需要将第三方Jar包放到
+    Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
     > plugins/your_plugin_name/lib/your_jar_name
 
     其他文件放到
@@ -230,11 +264,10 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
             fields = ["log_level", "message"]
             delimiter = ":"
         }
-        org.interestinglab.waterdrop.filter.ScalaSubstring {
-            source_field = "message"
-            target_field = "sub"
-            pos = 1
-            len = 3
+        sql = {
+            table_name = "tmp"
+            # 使用UDF
+            sql = "select log_level, my_sub(message, 1, 3) from tmp"
         }
     }
 

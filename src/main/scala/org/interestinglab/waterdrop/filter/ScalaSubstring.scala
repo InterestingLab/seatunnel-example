@@ -2,14 +2,22 @@ package org.interestinglab.waterdrop.filter
 
 import io.github.interestinglab.waterdrop.apis.BaseFilter
 import com.typesafe.config.{Config, ConfigFactory}
-import org.apache.spark.sql.{Row, Dataset, SparkSession}
-import org.apache.spark.sql.functions.{col, substring}
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.{Dataset, Row, SparkSession}
+import org.apache.spark.sql.functions.{col, udf, lit}
 
 import scala.collection.JavaConversions._
 
 class ScalaSubstring extends BaseFilter {
 
   var config: Config = ConfigFactory.empty()
+
+  override def getUdfList(): List[(String, UserDefinedFunction)] = {
+
+    val func = udf((s: String, pos: Int, len: Int) => s.substring(pos, pos+len))
+
+    List(("my_sub", func))
+  }
 
   /**
     * Set Config.
@@ -61,7 +69,8 @@ class ScalaSubstring extends BaseFilter {
     val targetField = config.getString("target_field")
     val pos = config.getInt("pos")
     val len = config.getInt("len")
-    df.withColumn(targetField, substring(col(srcField), pos, len))
+    val func = getUdfList().get(0)._2
+    df.withColumn(targetField, func(col(srcField), lit(pos), lit(len)))
   }
 
 }
