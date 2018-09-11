@@ -232,7 +232,8 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
 ## 三、 打包使用
 
 1. 打包
-> mvn package
+
+    > mvn package
 
 2. 将打包好的Jar包放到Waterdrop `plugins`目录下
     ```shell
@@ -289,19 +290,20 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
     ```
 
 4. 启动Waterdrop
-```
-./bin/start-waterdrop.sh --config config/application.conf --deploy-mode client --master local[2]
-```
+
+    ```
+    ./bin/start-waterdrop.sh --config config/application.conf --deploy-mode client --master local[2]
+    ```
 
 5. 查看结果
 
     ```
-    +----------------------------+---------+---------------------+---+
-    |raw_message                 |log_level|message              |sub|
-    +----------------------------+---------+---------------------+---+
-    |WARN : suwey is 16 years old|WARN     |suwey is 16 years old|suw|
-    |WARN : suwey is 16 years old|WARN     |suwey is 16 years old|suw|
-    +----------------------------+---------+---------------------+---+
+    +---------+------------------+
+    |log_level|UDF(message, 1, 3)|
+    +---------+------------------+
+    |INFO     |ary               |
+    |INFO     |ary               |
+    +---------+------------------+
     only showing top 2 rows
 
     ```
