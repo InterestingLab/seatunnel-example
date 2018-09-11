@@ -209,10 +209,20 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
     ```
 - 重写父类定义的`checkConfig`、`prepare`、`getUdfList`和`process`方法,这里只介绍`getUdfList`以及`process`两个方法
     ```Scala
-    override def getUdfList(): List[(String, UserDefinedFunction)] = {}
-    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
+    override def getUdfList(): List[(String, UserDefinedFunction)] = {
+      val func = udf((s: String, pos: Int, len: Int) => s.substring(pos, pos+len))
+      List(("my_sub", func))
+    }
+    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {
+      val srcField = config.getString("source_field")
+      val targetField = config.getString("target_field")
+      val pos = config.getInt("pos")
+      val len = config.getInt("len")
+      val func = getUdfList().get(0)._2
+      df.withColumn(targetField, func(col(srcField), lit(pos), lit(len)))
+    }
     ```
-    具体UDF插件开发案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
+    具体UDF插件开发完整案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
 - 新建META-INF/services
 
     Waterdrop会利用**Service loader**机制将实现`io.github.interestinglab.waterdrop.apis.BaseFilter`的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
