@@ -264,7 +264,7 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
     }
 
     input {
-        fake {
+        fakeStream {
             content = ["INFO : gary is 28 years old", "WARN : suwey is 16 years old"]
             rate = 5
         }
