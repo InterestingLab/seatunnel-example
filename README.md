@@ -82,7 +82,7 @@ override def rdd2dataset(spark: SparkSession, rdd: RDD[T]): Dataset[Row]
 
 #### StaticInput
 
-1. 新建一个类，并继承 **waterdrop-apis** 提供的父类`BaseStaticInput`
+- 新建一个类，并继承 **waterdrop-apis** 提供的父类`BaseStaticInput`
 
 ```scala
 class ScalaHdfsStatic extends BaseStaticInput {
@@ -104,7 +104,7 @@ class ScalaHdfsStatic extends BaseStaticInput {
   }
 ```
 
-2. 重写父类定义的`checkConfig`、`prepare` 和 `getDataset`方法
+- 重写父类定义的`checkConfig`、`prepare` 和 `getDataset`方法
 
 ```scala
 override def checkConfig(): (Boolean, String) = {}
