@@ -3,8 +3,6 @@ package org.interestinglab.waterdrop.input
 import com.typesafe.config.{Config, ConfigFactory}
 import io.github.interestinglab.waterdrop.apis.BaseStaticInput
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
 
 class ScalaHdfsStatic extends BaseStaticInput {
 
