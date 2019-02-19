@@ -1,11 +1,10 @@
 package org.interestinglab.waterdrop.input
 
 import com.typesafe.config.{Config, ConfigFactory}
-import io.github.interestinglab.waterdrop.apis.BaseStreamingInput
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
+import io.github.interestinglab.waterdrop.apis.BaseStaticInput
+import org.apache.spark.sql.{Dataset, Row, SparkSession}
 
-class ScalaHdfs extends BaseStreamingInput {
+class ScalaHdfsStatic extends BaseStaticInput {
 
   var config: Config = ConfigFactory.empty()
 
@@ -42,11 +41,19 @@ class ScalaHdfs extends BaseStreamingInput {
     }
   }
 
-  override def getDStream(ssc: StreamingContext): DStream[(String, String)] = {
+  override def getDataset(spark: SparkSession): Dataset[Row] = {
+    val format = config.getString("format")
+    val reader = spark.read.format(format)
+    val path = config.getString("path")
 
-    ssc.textFileStream(config.getString("path")).map(s => {
-      ("", s)
-    })
+    format match {
+      case "text" => reader.load(path).withColumnRenamed("value", "raw_message")
+      case "parquet" => reader.parquet(path)
+      case "json" => reader.json(path)
+      case "orc" => reader.orc(path)
+      case "csv" => reader.csv(path)
+      case _ => reader.load(path)
+    }
   }
 
 }

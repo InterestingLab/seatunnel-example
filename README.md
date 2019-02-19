@@ -3,27 +3,27 @@
 
 ## 插件体系介绍
 
-Waterdrop插件分为三部分，**Input**、**Filter**和**Output**
+Waterdrop 插件分为三部分，**Input**、**Filter** 和 **Output**
 
 ### Input
 
-**Input**负责将外部数据源的数据转化为`DStream[(String, String)]`
+**Input**插件有两种类型。分别是读取实时数据的 `StreamingInput`或者是读取静态离线数据的`StaticInput`
 
 ### Filter
 
-**Filter**是[transform](http://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations)操作，负责对DataFrame的数据结构进行操作
+**Filter**是 [transform](http://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations) 操作，负责对 [Spark Dataframes](https://spark.apache.org/docs/latest/sql-programming-guide.html) 进行操作。
 
 ### Output
 
-**Output**是[action](http://spark.apache.org/docs/latest/rdd-programming-guide.html#actions)操作，负责将DataFrame输出到外部数据源或者打印到终端
+**Output**是 [action](http://spark.apache.org/docs/latest/rdd-programming-guide.html#actions) 操作，负责将 [Spark Dataframes](https://spark.apache.org/docs/latest/sql-programming-guide.html) 输出到外部数据源或者打印到终端
 
 ## 准备工作
 
-Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐使用Scala作为开发语言，其余类型插件Java和Scala皆可。
+Waterdrop 支持 Java/Scala作为 插件开发语言，其中 **Input** 插件推荐使用 Scala 作为开发语言，其余类型插件 Java 或者 Scala 皆可。
 
-新建一个Java/Scala项目，或者可以直接拉取[waterdrop-filter-example](https://github.com/InterestingLab/waterdrop-filter-example)，然后在此项目上进行修改
+新建一个 Java/Scala 项目，或者可以直接拉取 [waterdrop-filter-example](https://github.com/InterestingLab/waterdrop-filter-example)，然后在此项目上进行修改。
 
-##  一、 新建pom.xml
+##  一、新建 pom.xml
 
 参考文件[pom.xml](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/pom.xml)
 
@@ -36,198 +36,246 @@ Waterdrop支持Java/Scala作为插件开发语言，其中**Input**插件推荐�
 </dependency>
 ```
 
-## 二、 实现自己的方法
+## 二、实现自己的方法
 
-### Input(实时流)
+### Input
 
-- 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseInput`
-    ```scala
-    class ScalaHdfs extends BaseStreamingInput {
-    
-      var config: Config = ConfigFactory.empty()
-    
-      /**
-        * Set Config.
-        **/
-      override def setConfig(config: Config): Unit = {
-        this.config = config
-      }
-    
-      /**
-        * Get Config.
-        **/
-      override def getConfig(): Config = {
-        this.config
-      }
-    ```
-- 重写父类定义的`checkConfig`、`prepare`和`getDstream`方法
-    ```scala
-    override def checkConfig(): (Boolean, String) = {}
-    override def prepare(spark: SparkSession): Unit = {}
-    override def getDStream(ssc: StreamingContext): DStream[(String, String)] = {}
-  
-    ```
-- **Input**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`getStream`方法将外部数据源转换为`DStream[(String, String)]`
-- Scala版本**Input**插件实现参照[ScalaHdfs](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/input/ScalaHdfs.scala)
+Input 插件有两种类型，分别是实时数据和离线数据
 
+#### StreamingInput
+
+- 新建一个类，并继承 **waterdrop-apis** 提供的父类`BaseStreamingInput`， `BaseStreamingInput`类支持泛型，用户可以根据实际数据情况指定类型。
+
+```scala
+class ScalaHdfs extends BaseStreamingInput[T] {
+
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
+  }
+```
+
+- 重写父类定义的`checkConfig`、`prepare`、`getDstream`和`rdd2dataset`方法
+
+```scala
+override def checkConfig(): (Boolean, String) = {}
+override def prepare(spark: SparkSession): Unit = {}
+override def getDStream(ssc: StreamingContext): DStream[T] = {}
+override def rdd2dataset(spark: SparkSession, rdd: RDD[T]): Dataset[Row]
+
+```
+
+- **Input**插件在调用时会先执行 `checkConfig` 方法核对调用插件时传入的参数是否正确，然后调用 `prepare` 方法配置参数的缺省值以及初始化类的成员变量，接着调用 `getStream` 方法将外部数据源转换为 `DStream[T]`，最后调用 `rdd2dataset` 方法将 RDD 数据转换为 **Dataset** 结构数据供 `Filter` 插件处理。
+
+- Scala版本 **Streaming Input** 插件实现参照 [ScalaHdfsStream](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/input/ScalaHdfsStream.scala)
+
+#### StaticInput
+
+- 新建一个类，并继承 **waterdrop-apis** 提供的父类`BaseStaticInput`
+
+```scala
+class ScalaHdfsStatic extends BaseStaticInput {
+
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
+  }
+```
+
+- 重写父类定义的`checkConfig`、`prepare` 和 `getDataset`方法
+
+```scala
+override def checkConfig(): (Boolean, String) = {}
+override def prepare(spark: SparkSession): Unit = {}
+override def getDataset(spark: SparkSession): Dataset[Row] = {}
+```
+
+- **Input**插件在调用时会先执行 `checkConfig` 方法核对调用插件时传入的参数是否正确，然后调用 `prepare` 方法配置参数的缺省值以及初始化类的成员变量，最后调用 `getDataset` 方法将外部数据转换为 **Dataset** 结构数据供 `Filter` 插件处理。
+
+
+- Scala版本 **Static Input** 插件实现参照 [ScalaHdfsStatic](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/input/ScalaHdfsStatic.scala)
 
 ### Filter
 
-- 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseFilter`
-    ```Scala
-    class ScalaSubstring extends BaseFilter {
-    
-      var config: Config = ConfigFactory.empty()
-    
-      /**
-        * Set Config.
-        **/
-      override def setConfig(config: Config): Unit = {
-        this.config = config
-      }
-    
-      /**
-        * Get Config.
-        **/
-      override def getConfig(): Config = {
-        this.config
-      }
+- 新建一个类，并继承 **Waterdrop-apis** 提供的父类 `BaseFilter`
+```Scala
+class ScalaSubstring extends BaseFilter {
+
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
+  }
+}
+```
+```Java
+public class JavaSubstring extends BaseFilter {
+
+    private Config config;
+
+    @Override
+    public Config getConfig() {
+        return config;
     }
-    ```
-    ```Java
-    public class JavaSubstring extends BaseFilter {
-    
-        private Config config;
-    
-        @Override
-        public Config getConfig() {
-            return config;
-        }
-    
-        @Override
-        public void setConfig(Config config) {
-            this.config = config;
-        }
+
+    @Override
+    public void setConfig(Config config) {
+        this.config = config;
     }
-    ```
-- 重写父类定义的`checkConfig`、`prepare`和`process`方法
-    ```Scala
-    override def checkConfig(): (Boolean, String) = {}
-    override def prepare(spark: SparkSession): Unit = {}
-    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
-    ```
-    ```Java
-    @Override
-    public Tuple2<Object, String> checkConfig() {}
-    @Override
-    public void prepare(SparkSession spark, StreamingContext ssc) {}
-    @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
-    ```
-    - **Filter**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法对 **Dataset[Row]** 格式数据进行处理。
-    - Java版本**Filter**插件的实现参照[JavaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/filter/JavaSubstring.java)，Scala版本**Filter**插件的实现参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala)
+}
+```
+- 重写父类定义的`checkConfig`、`prepare`和 `process`方法
+```Scala
+override def checkConfig(): (Boolean, String) = {}
+override def prepare(spark: SparkSession): Unit = {}
+override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
+```
+```Java
+@Override
+public Tuple2<Object, String> checkConfig() {}
+@Override
+public void prepare(SparkSession spark, StreamingContext ssc) {}
+@Override
+public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
+```
+- **Filter**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法对 **Dataset[Row]** 格式数据进行处理。
+- Java版本**Filter**插件的实现参照[JavaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/filter/JavaSubstring.java)，Scala版本**Filter**插件的实现参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala)
 
 ### Output
 
 - 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseOutput`
-    ```Scala
-    class ScalaStdout extends BaseOutput {
-    
-    
-      var config: Config = ConfigFactory.empty()
-    
-      /**
-        * Set Config.
-        **/
-      override def setConfig(config: Config): Unit = {
-        this.config = config
-      }
-    
-      /**
-        * Get Config.
-        **/
-      override def getConfig(): Config = {
-        this.config
-      }
+```Scala
+class ScalaStdout extends BaseOutput {
+
+
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
+  }
+}
+```
+```Java
+public class JavaStdout extends BaseOutput {
+
+    private Config config;
+
+    @Override
+    public Config getConfig() {
+        return config;
     }
-    ```
-    ```Java
-    public class JavaStdout extends BaseOutput {
-    
-        private Config config;
-    
-        @Override
-        public Config getConfig() {
-            return config;
-        }
-    
-        @Override
-        public void setConfig(Config config) {
-            this.config = config;
-        }
+
+    @Override
+    public void setConfig(Config config) {
+        this.config = config;
     }
-    ```
+}
+```
 - 重写父类定义的`checkConfig`、`prepare`和`process`方法
-    ```Scala
-    override def checkConfig(): (Boolean, String) = {}
-    override def prepare(spark: SparkSession): Unit = {}
-    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
-    ```
-    ```Java
-    @Override
-    public Tuple2<Object, String> checkConfig() {}
-    @Override
-    public void prepare(SparkSession spark) {}
-    @Override
-    public Dataset<Row> process(SparkSession spark, Dataset<Row> ds) {}
-    ```
-    - **Output**插件调用结构与**Filter**插件相似。在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法将 **Dataset[Row]** 格式数据输出到外部数据源。
-    - Java版本**Output**插件的实现参照[JavaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/output/JavaStdout.java)，Scala版本**Output**插件的实现参照[ScalaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/output/ScalaStdout.scala)
+```Scala
+override def checkConfig(): (Boolean, String) = {}
+override def prepare(spark: SparkSession): Unit = {}
+override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
+```
+```Java
+@Override
+public Tuple2<Object, String> checkConfig() {}
+@Override
+public void prepare(SparkSession spark) {}
+@Override
+public Dataset<Row> process(SparkSession spark, Dataset<Row> ds) {}
+```
+- **Output** 插件调用结构与 **Filter**插件相似。在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用 `prepare` 方法配置参数的缺省值以及初始化类的成员变量，最后调用 `process` 方法将 **Dataset[Row]** 格式数据输出到外部数据源。
+- Java版本**Output**插件的实现参照 [JavaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/output/JavaStdout.java)，Scala版本 **Output** 插件的实现参照 [ScalaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/output/ScalaStdout.scala)
 
 ### UDF
 
 - 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseFilter`
-    ```Scala
-    class ScalaSubstring extends BaseFilter {
-    
-      var config: Config = ConfigFactory.empty()
-    
-      /**
-        * Set Config.
-        **/
-      override def setConfig(config: Config): Unit = {
-        this.config = config
-      }
-    
-      /**
-        * Get Config.
-        **/
-      override def getConfig(): Config = {
-        this.config
-      }
-    }
-    ```
+```Scala
+class ScalaSubstring extends BaseFilter {
+
+  var config: Config = ConfigFactory.empty()
+
+  /**
+    * Set Config.
+    **/
+  override def setConfig(config: Config): Unit = {
+    this.config = config
+  }
+
+  /**
+    * Get Config.
+    **/
+  override def getConfig(): Config = {
+    this.config
+  }
+}
+```
 - 重写父类定义的`checkConfig`、`prepare`、`getUdfList`和`process`方法,这里只介绍`getUdfList`以及`process`两个方法
-    ```Scala
-    override def getUdfList(): List[(String, UserDefinedFunction)] = {
-      val func = udf((s: String, pos: Int, len: Int) => s.substring(pos, pos+len))
-      List(("my_sub", func))
-    }
-    override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {
-      val srcField = config.getString("source_field")
-      val targetField = config.getString("target_field")
-      val pos = config.getInt("pos")
-      val len = config.getInt("len")
-      val func = getUdfList().get(0)._2
-      df.withColumn(targetField, func(col(srcField), lit(pos), lit(len)))
-    }
-    ```
-    具体UDF插件开发完整案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
+
+```Scala
+override def getUdfList(): List[(String, UserDefinedFunction)] = {
+  val func = udf((s: String, pos: Int, len: Int) => s.substring(pos, pos+len))
+  List(("my_sub", func))
+}
+override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {
+  val srcField = config.getString("source_field")
+  val targetField = config.getString("target_field")
+  val pos = config.getInt("pos")
+  val len = config.getInt("len")
+  val func = getUdfList().get(0)._2
+  df.withColumn(targetField, func(col(srcField), lit(pos), lit(len)))
+}
+```
+
+具体UDF插件开发完整案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
 - 新建META-INF/services
 
-    Waterdrop会利用**Service loader**机制将实现`io.github.interestinglab.waterdrop.apis.BaseFilter`的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
-    
-    案例中的[META-INF](https://github.com/InterestingLab/waterdrop-example/blob/master/src/main/resources/META-INF/services/io.github.interestinglab.waterdrop.apis.BaseFilter)
+Waterdrop会利用 **Service Loader** 机制将实现`io.github.interestinglab.waterdrop.apis.BaseFilter`的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
+
+案例中的[META-INF](https://github.com/InterestingLab/waterdrop-example/blob/master/src/main/resources/META-INF/services/io.github.interestinglab.waterdrop.apis.BaseFilter)
 
 ## 三、 打包使用
 
