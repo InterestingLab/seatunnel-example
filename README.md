@@ -32,7 +32,7 @@ Waterdrop 支持 Java/Scala作为 插件开发语言，其中 **Input** 插件�
 <dependency>
     <groupId>io.github.interestinglab.waterdrop</groupId>
     <artifactId>waterdrop-apis_2.11</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
