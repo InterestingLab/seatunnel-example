@@ -1,5 +1,7 @@
 # 插件开发
 
+[TOC]
+
 
 ## 插件体系介绍
 
@@ -7,7 +9,7 @@ Waterdrop 插件分为三部分，**Input**、**Filter** 和 **Output**
 
 ### Input
 
-**Input**插件有两种类型。分别是读取实时数据的 `StreamingInput`或者是读取静态离线数据的`StaticInput`
+**Input** 插件有三种类型。分别是读取静态离线数据的 `StaticInput`、 实时数据流处理 `StreamingInput` 以及有状态的实时流处理 `BaseStructuredStreamingInput`。
 
 ### Filter
 
@@ -19,7 +21,7 @@ Waterdrop 插件分为三部分，**Input**、**Filter** 和 **Output**
 
 ## 准备工作
 
-Waterdrop 支持 Java/Scala作为 插件开发语言，其中 **Input** 插件推荐使用 Scala 作为开发语言，其余类型插件 Java 或者 Scala 皆可。
+Waterdrop 支持 Java/Scala作为 插件开发语言，其中 **Input Streaming** 插件推荐使用 Scala 作为开发语言，其余类型插件 Java 或者 Scala 皆可。
 
 新建一个 Java/Scala 项目，或者可以直接拉取 [waterdrop-filter-example](https://github.com/InterestingLab/waterdrop-filter-example)，然后在此项目上进行修改。
 
@@ -32,7 +34,7 @@ Waterdrop 支持 Java/Scala作为 插件开发语言，其中 **Input** 插件�
 <dependency>
     <groupId>io.github.interestinglab.waterdrop</groupId>
     <artifactId>waterdrop-apis_2.11</artifactId>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -44,10 +46,12 @@ Input 插件有两种类型，分别是实时数据和离线数据
 
 #### StreamingInput
 
-- 新建一个类，并继承 **waterdrop-apis** 提供的父类`BaseStreamingInput`， `BaseStreamingInput`类支持泛型，用户可以根据实际数据情况指定类型。
+- 新建一个类，并继承 **waterdrop-apis** 提供的父类 `BaseStreamingInput`， `BaseStreamingInput` 类支持泛型，用户可以根据实际数据情况指定类型。
+
+  需要注意，`StreamingInput` 类插件，类名必须以 **Stream** 结尾，如 `hdfsStream`
 
 ```scala
-class ScalaHdfs extends BaseStreamingInput[T] {
+class ScalaHdfsStream extends BaseStreamingInput[T] {
 
   var config: Config = ConfigFactory.empty()
 
@@ -82,7 +86,7 @@ override def rdd2dataset(spark: SparkSession, rdd: RDD[T]): Dataset[Row]
 
 #### StaticInput
 
-- 新建一个类，并继承 **waterdrop-apis** 提供的父类`BaseStaticInput`
+- 新建一个类，并继承 **waterdrop-apis** 提供的父类 `BaseStaticInput`
 
 ```scala
 class ScalaHdfsStatic extends BaseStaticInput {
@@ -120,6 +124,8 @@ override def getDataset(spark: SparkSession): Dataset[Row] = {}
 ### Filter
 
 - 新建一个类，并继承 **Waterdrop-apis** 提供的父类 `BaseFilter`
+
+1. Scala 实现
 ```Scala
 class ScalaSubstring extends BaseFilter {
 
@@ -140,6 +146,8 @@ class ScalaSubstring extends BaseFilter {
   }
 }
 ```
+
+2. Java 实现
 ```Java
 public class JavaSubstring extends BaseFilter {
 
@@ -157,11 +165,14 @@ public class JavaSubstring extends BaseFilter {
 }
 ```
 - 重写父类定义的`checkConfig`、`prepare`和 `process`方法
+1. Scala 实现
 ```Scala
 override def checkConfig(): (Boolean, String) = {}
 override def prepare(spark: SparkSession): Unit = {}
 override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
 ```
+
+2. Java 实现
 ```Java
 @Override
 public Tuple2<Object, String> checkConfig() {}
@@ -176,6 +187,8 @@ public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
 ### Output
 
 - 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseOutput`
+
+1. Scala 实现
 ```Scala
 class ScalaStdout extends BaseOutput {
 
@@ -197,6 +210,8 @@ class ScalaStdout extends BaseOutput {
   }
 }
 ```
+
+2. Java 实现
 ```Java
 public class JavaStdout extends BaseOutput {
 
@@ -214,11 +229,15 @@ public class JavaStdout extends BaseOutput {
 }
 ```
 - 重写父类定义的`checkConfig`、`prepare`和`process`方法
+
+1. Scala 实现
 ```Scala
 override def checkConfig(): (Boolean, String) = {}
 override def prepare(spark: SparkSession): Unit = {}
 override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
 ```
+
+2. Java 实现
 ```Java
 @Override
 public Tuple2<Object, String> checkConfig() {}
@@ -232,7 +251,7 @@ public Dataset<Row> process(SparkSession spark, Dataset<Row> ds) {}
 
 ### UDF
 
-- 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseFilter`
+- 新建一个类，并继承**Waterdrop-apis**提供的父类 `BaseFilter`
 ```Scala
 class ScalaSubstring extends BaseFilter {
 
@@ -271,87 +290,89 @@ override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {
 ```
 
 具体UDF插件开发完整案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
-- 新建META-INF/services
 
-Waterdrop会利用 **Service Loader** 机制将实现`io.github.interestinglab.waterdrop.apis.BaseFilter`的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
+- 新建 `META-INF/services`
 
-案例中的[META-INF](https://github.com/InterestingLab/waterdrop-example/blob/master/src/main/resources/META-INF/services/io.github.interestinglab.waterdrop.apis.BaseFilter)
+Waterdrop 会利用 **Service Loader** 机制将实现 `io.github.interestinglab.waterdrop.apis.BaseFilter` 的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
+
+案例中的 [META-INF](https://github.com/InterestingLab/waterdrop-example/blob/master/src/main/resources/META-INF/services/io.github.interestinglab.waterdrop.apis.BaseFilter)
 
 ## 三、 打包使用
 
 1. 打包
 
-    > mvn package
+> mvn package
 
-2. 将打包好的Jar包放到Waterdrop `plugins`目录下
-    ```shell
-    cd waterdrop-1.1.0
-    mkdir -p plugins/my_plugins/lib
-    cd plugins/my_plugins/lib
-    ```
+2. 将打包好的Jar包放到 Waterdrop `plugins`目录下
 
-    Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
-    > plugins/your_plugin_name/lib/your_jar_name
+```shell
+cd waterdrop-1.1.0
+mkdir -p plugins/my_plugins/lib
+cd plugins/my_plugins/lib
+```
 
-    其他文件放到
-    > plugins/your_plugin_name/files/your_file_name
+Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
+> plugins/your_plugin_name/lib/your_jar_name
+
+其他文件放到
+> plugins/your_plugin_name/files/your_file_name
 
 3. 在配置文件中使用插件
 
-    以下是一个使用第三方插件的完整示例，并将其放至`config/application.conf`
+以下是一个使用第三方插件的完整示例，并将其放至`config/application.conf`
 
-    由`Fake`插件生成测试数据，进行`Split`进行分割后，使用第三方插件`ScalaSubstring`进行字符串截取，最后使用第三方插件`JavaStdout`打印到终端。
-    ```
-    spark {
-        spark.streaming.batchDuration = 5
-        spark.app.name = "Waterdrop-sample"
-        spark.ui.port = 13000
-        spark.executor.instances = 2
-        spark.executor.cores = 1
-        spark.executor.memory = "1g"
-    }
+由`Fake`插件生成测试数据，进行`Split`进行分割后，使用第三方插件`ScalaSubstring`进行字符串截取，最后使用第三方插件`JavaStdout`打印到终端。
+```
+spark {
+    spark.streaming.batchDuration = 5
+    spark.app.name = "Waterdrop-sample"
+    spark.ui.port = 13000
+    spark.executor.instances = 2
+    spark.executor.cores = 1
+    spark.executor.memory = "1g"
+}
 
-    input {
-        fakeStream {
-            content = ["INFO : gary is 28 years old", "WARN : suwey is 16 years old"]
-            rate = 5
-        }
+input {
+    fakeStream {
+        content = ["INFO : gary is 28 years old", "WARN : suwey is 16 years old"]
+        rate = 5
     }
+}
 
-    filter {
-        split {
-            fields = ["log_level", "message"]
-            delimiter = ":"
-        }
-        sql = {
-            table_name = "tmp"
-            # 使用UDF
-            sql = "select log_level, my_sub(message, 1, 3) from tmp"
-        }
+filter {
+    split {
+        fields = ["log_level", "message"]
+        delimiter = ":"
     }
+    sql = {
+        table_name = "tmp"
+        # 使用UDF
+        sql = "select log_level, my_sub(message, 1, 3) from tmp"
+    }
+}
 
-    output {
-        org.interestinglab.waterdrop.output.JavaStdout {
-            limit = 2
-        }
+output {
+    org.interestinglab.waterdrop.output.JavaStdout {
+        limit = 2
     }
-    ```
+}
+```
 
 4. 启动Waterdrop
 
-    ```
-    ./bin/start-waterdrop.sh --config config/application.conf --deploy-mode client --master local[2]
-    ```
+```
+./bin/start-waterdrop.sh --config config/application.conf --deploy-mode client --master local[2]
+```
 
 5. 查看结果
 
-    ```
-    +---------+------------------+
-    |log_level|UDF(message, 1, 3)|
-    +---------+------------------+
-    |INFO     |ary               |
-    |INFO     |ary               |
-    +---------+------------------+
-    only showing top 2 rows
+```
++---------+------------------+
+|log_level|UDF(message, 1, 3)|
++---------+------------------+
+|INFO     |ary               |
+|INFO     |ary               |
++---------+------------------+
+only showing top 2 rows
 
-    ```
+```
