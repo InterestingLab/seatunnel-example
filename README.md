@@ -48,8 +48,10 @@ Input 插件有两种类型，分别是实时数据和离线数据
 
 - 新建一个类，并继承 **waterdrop-apis** 提供的父类 `BaseStreamingInput`， `BaseStreamingInput` 类支持泛型，用户可以根据实际数据情况指定类型。
 
+  需要注意，`StreamingInput` 类插件，类名必须以 **Stream** 结尾，如 `hdfsStream`
+
 ```scala
-class ScalaHdfs extends BaseStreamingInput[T] {
+class ScalaHdfsStream extends BaseStreamingInput[T] {
 
   var config: Config = ConfigFactory.empty()
 
@@ -301,7 +303,7 @@ Waterdrop 会利用 **Service Loader** 机制将实现 `io.github.interestinglab
 
 > mvn package
 
-2. 将打包好的Jar包放到Waterdrop `plugins`目录下
+2. 将打包好的Jar包放到 Waterdrop `plugins`目录下
 
 ```shell
 cd waterdrop-1.1.0
