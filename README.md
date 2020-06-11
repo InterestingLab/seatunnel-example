@@ -1,317 +1,297 @@
-# 插件开发
+本文面向所有 Waterdrop 插件开发人员，尽可能清晰得阐述开发一个 Waterdrop 插件所经历的过程，希望能消除开发者的困惑。
 
-[TOC]
+## Waterdrop 为什么需要插件机制
 
+1. 原生提供插件可能仅能满足80%的需求，还有20%需要你自己来开发
+2. 有了插件机制，开发仅需关注特定插件的处理逻辑，数据处理的共性问题，由框架来统一处理。
+3. 通用插件大大提升了代码的复用率。
 
-## 插件体系介绍
+## Waterdrop 插件体系介绍
 
-Waterdrop 插件分为三部分，**Input**、**Filter** 和 **Output**
+Waterdrop 插件分为3部分，`Input` 、`filter` 和 `output`，这里贴一个简版类图
 
-### Input
+<p align="center">
+    <img src="./docs/imgs/spi.png" width="640">
+</p>
+### Input 
 
-**Input** 插件有三种类型。分别是读取静态离线数据的 `StaticInput`、 实时数据流处理 `StreamingInput` 以及有状态的实时流处理 `BaseStructuredStreamingInput`。
+`Input` 插件主要负责从外部读取数据并且封装为 `Spark DataSet[Row]` 数据集。插件有三种类型，分别是：
+
+1. 读取静态离线数据的 `BaseStaticInput`
+2. 实时数据流处理 `BaseStreamingInput`，并且我们在此接口基础上开发了方便 Java 使用的 `BaseJavaStreamingInput`
+3. 状态的实时流处理 `BaseStructuredStreamingInput`
 
 ### Filter
 
-**Filter**是 [transform](http://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations) 操作，负责对 [Spark Dataframes](https://spark.apache.org/docs/latest/sql-programming-guide.html) 进行操作。
+`Filter` 插件主要负责处理类型为 `Spark DataSet[Row]` 的输入，并且返回同样为 `Spark DataSet[Row]` 类型的数据集。
 
 ### Output
 
-**Output**是 [action](http://spark.apache.org/docs/latest/rdd-programming-guide.html#actions) 操作，负责将 [Spark Dataframes](https://spark.apache.org/docs/latest/sql-programming-guide.html) 输出到外部数据源或者打印到终端
+`Output` 插件则负责将 `Spark DataSet[Row]` 数据集输出到外部数据源或者将结果打印到终端。
 
-## 准备工作
 
-Waterdrop 支持 Java/Scala作为 插件开发语言，其中 **Input Streaming** 插件推荐使用 Scala 作为开发语言，其余类型插件 Java 或者 Scala 皆可。
+## 如何开发一个插件
 
-新建一个 Java/Scala 项目，或者可以直接拉取 [waterdrop-filter-example](https://github.com/InterestingLab/waterdrop-filter-example)，然后在此项目上进行修改。
+### 第一步，创建项目
 
-##  一、新建 pom.xml
+创建项目或者直接拉取本项目代码
 
-参考文件[pom.xml](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/pom.xml)
+> git clone https://github.com/InterestingLab/waterdrop-example.git
 
-将Waterdrop提供的接口加入项目的依赖中
+当你看到这里的，相比这一步不用过多阐述
+
+### 第二步，配置waterdrop-api依赖
+
+**sbt**
+```
+libraryDependencies += "io.github.interestinglab.waterdrop" %% "waterdrop-apis" % "1.5.0"
+```
+
+**maven**
 ```
 <dependency>
     <groupId>io.github.interestinglab.waterdrop</groupId>
     <artifactId>waterdrop-apis_2.11</artifactId>
-    <version>1.3.0</version>
+    <version>1.5.0</version>
 </dependency>
 ```
 
-## 二、实现自己的方法
+### 第三步，继承并实现接口
 
-### Input
+#### 1. Input
 
-Input 插件有两种类型，分别是实时数据和离线数据
+新建一个类，并继承 **waterdrop-apis** 提供的父类并实现相关接口完成 `Input` 插件开发。
 
-#### StreamingInput
+##### 1.1 StreamingInput
 
-- 新建一个类，并继承 **waterdrop-apis** 提供的父类 `BaseStreamingInput`， `BaseStreamingInput` 类支持泛型，用户可以根据实际数据情况指定类型。
+`BaseStreamingInput` 用于实现一个流式处理 `Input` 插件，它支持泛型，用户可以根据实际数据情况指定类型。
 
-  需要注意，`StreamingInput` 类插件，类名必须以 **Stream** 结尾，如 `hdfsStream`
+需要注意，Waterdrop 中的流式计算插件，类名必须以 **Stream** 结尾，如 `hdfsStream`。
 
-```scala
-class ScalaHdfsStream extends BaseStreamingInput[T] {
-
-  var config: Config = ConfigFactory.empty()
-
-  /**
-    * Set Config.
-    **/
-  override def setConfig(config: Config): Unit = {
-    this.config = config
-  }
-
-  /**
-    * Get Config.
-    **/
-  override def getConfig(): Config = {
-    this.config
-  }
-```
-
-- 重写父类定义的`checkConfig`、`prepare`、`getDstream`和`rdd2dataset`方法
+`BaseStreamingInput` 接口定义如下：
 
 ```scala
-override def checkConfig(): (Boolean, String) = {}
-override def prepare(spark: SparkSession): Unit = {}
-override def getDStream(ssc: StreamingContext): DStream[T] = {}
-override def rdd2dataset(spark: SparkSession, rdd: RDD[T]): Dataset[Row]
+abstract class BaseStreamingInput[T] extends Plugin {
 
+  /**
+   * Things to do after filter and before output
+   * */
+  def beforeOutput: Unit = {}
+
+  /**
+   * Things to do after output, such as update offset
+   * */
+  def afterOutput: Unit = {}
+
+  /**
+   * This must be implemented to convert RDD[T] to Dataset[Row] for later processing
+   * */
+  def rdd2dataset(spark: SparkSession, rdd: RDD[T]): Dataset[Row]
+
+  /**
+   * start should be invoked in when data is ready.
+   * */
+  def start(spark: SparkSession, ssc: StreamingContext, handler: Dataset[Row] => Unit): Unit = {
+
+    getDStream(ssc).foreachRDD(rdd => {
+      val dataset = rdd2dataset(spark, rdd)
+      handler(dataset)
+    })
+  }
+
+  /**
+   * Create spark dstream from data source, you can specify type parameter.
+   * */
+  def getDStream(ssc: StreamingContext): DStream[T]
 ```
 
-- **Input**插件在调用时会先执行 `checkConfig` 方法核对调用插件时传入的参数是否正确，然后调用 `prepare` 方法配置参数的缺省值以及初始化类的成员变量，接着调用 `getStream` 方法将外部数据源转换为 `DStream[T]`，最后调用 `rdd2dataset` 方法将 RDD 数据转换为 **Dataset** 结构数据供 `Filter` 插件处理。
+`BaseStreamingInput` 接口功能如下：
 
-- Scala版本 **Streaming Input** 插件实现参照 [ScalaHdfsStream](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/input/ScalaHdfsStream.scala)
+* `beforeOutput`: 定义调用 Output 之前的逻辑。
+* `afterOutput`: 定义调用 Output 之后的逻辑，常用于维护 Offset 实现 *at-least-once* 语义
+* `rdd2dataset`: 定义 **RDD[T]** 转换为 **DataSet[Row]** 的处理逻辑
+* `start`: 内部操作逻辑，可以无需关心
+* `getDStream`: 定义获取外部数据源数据的逻辑，需要生成 **DStream[T]**
 
-#### StaticInput
+总的来说，我们需要定义外部数据源转换为 **DataSet[Row]** 的逻辑。
 
-- 新建一个类，并继承 **waterdrop-apis** 提供的父类 `BaseStaticInput`
+<p align="center">
+    <img src="./docs/imgs/p1.png" width="80">
+</p>
+
+
+##### 1.2 BaseStaticFilter
+
+`BaseStaticFilter` 用于实现一个静态数据源读取插件，接口定义如下
+
+```
+abstract class BaseStaticInput extends Plugin {
+
+  /**
+   * Get Dataset from this Static Input.
+   * */
+  def getDataset(spark: SparkSession): Dataset[Row]
+}
+```
+
+接口功能如下：
+
+* `getDataset`: 将外部数据源转换为 **DataSet[Row]**
+
+<p align="center">
+    <img src="./docs/imgs/p2.png" width="80">
+</p>
+
+
+##### 1.3 BaseStructuredStreamingInput
+
+`BaseStructuredStreamingInput` 接口定义与 `BaseStaticFilter` 定义类似，此处不再做过多陈述。
+
+
+#### 2. Filter
+
+新建一个类，并继承 **waterdrop-apis** 提供的父类并实现相关接口完成 `Filter` 插件开发。
+
+##### BaseFilter
+
+Spark 较好实现了批流一体，因此我们的 `Filter` 插件仅有一套API，且大部分 `Filter` 插件都能同时支持批处理和流处理。
+
+`BaseFilter` 接口定义如下：
+
+```
+abstract class BaseFilter extends Plugin {
+
+  def process(spark: SparkSession, df: Dataset[Row]): Dataset[Row]
+
+  /**
+   * Allow to register user defined UDFs
+   * @return empty list if there is no UDFs to be registered
+   * */
+  def getUdfList(): List[(String, UserDefinedFunction)] = List.empty
+
+  /**
+   * Allow to register user defined UDAFs
+   * @return empty list if there is no UDAFs to be registered
+   * */
+  def getUdafList(): List[(String, UserDefinedAggregateFunction)] = List.empty
+}
+```
+
+`BaseFilter` 接口功能如下：
+
+`process`: 定义 `Filter` 插件的具体操作逻辑，方法输入和输出都是 **DataSet[Row]**
+`getUdfList`: 定义需要被注册的 UDF 列表
+`getUdafList`: 定义需要被注册的 UDAF 列表
+
+大部分场景我们仅需要实现 `process` 方法定义数据处理逻辑即可。
+
+<p align="center">
+    <img src="./docs/imgs/p3.png" width="80">
+</p>
+
+#### 3. Output
+
+新建一个类，并继承 **waterdrop-apis** 提供的父类并实现相关接口完成 `Output` 插件开发。
+
+##### 3.1 BaseOutput
+
+`BaseOutput` 插件支持批处理和 Spark Streaming，不支持 Spark Structured Streaming
+
+`BaseOutput` 接口定义如下:
 
 ```scala
-class ScalaHdfsStatic extends BaseStaticInput {
+abstract class BaseOutput extends Plugin {
 
-  var config: Config = ConfigFactory.empty()
-
-  /**
-    * Set Config.
-    **/
-  override def setConfig(config: Config): Unit = {
-    this.config = config
-  }
-
-  /**
-    * Get Config.
-    **/
-  override def getConfig(): Config = {
-    this.config
-  }
+  def process(df: Dataset[Row])
+}
 ```
 
-- 重写父类定义的`checkConfig`、`prepare` 和 `getDataset`方法
+`BaseOutput` 接口功能如下:
+
+`process`: 定义 **Dataset[Row]** 数据输出到外部数据源的方法，需要注意，这里需要触发一个 `action` 操作
+
+<p align="center">
+    <img src="./docs/imgs/p4.png" width="80">
+</p>
+
+
+##### 3.2 BaseStructuredStreamingOutputIntra
+
+`BaseStructuredStreamingOutputIntra` 则是为了提供 Spark Structured Streaming 对外输出的插件。
+
+`BaseStructuredStreamingOutputIntra` 接口定义
 
 ```scala
-override def checkConfig(): (Boolean, String) = {}
-override def prepare(spark: SparkSession): Unit = {}
-override def getDataset(spark: SparkSession): Dataset[Row] = {}
+trait BaseStructuredStreamingOutputIntra extends Plugin {
+
+  def process(df: Dataset[Row]): DataStreamWriter[Row]
+}
 ```
 
-- **Input**插件在调用时会先执行 `checkConfig` 方法核对调用插件时传入的参数是否正确，然后调用 `prepare` 方法配置参数的缺省值以及初始化类的成员变量，最后调用 `getDataset` 方法将外部数据转换为 **Dataset** 结构数据供 `Filter` 插件处理。
+`BaseStructuredStreamingOutputIntra` 接口功能：
 
+`process`: 与 `BaseOutput` 不同的是，这里返回的是 **DataStreamWriter[Row]**。
 
-- Scala版本 **Static Input** 插件实现参照 [ScalaHdfsStatic](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/input/ScalaHdfsStatic.scala)
+<p align="center">
+    <img src="./docs/imgs/p5.png" width="80">
+</p>
 
-### Filter
+##### 3.3 BaseStructuredStreamingOutput
 
-- 新建一个类，并继承 **Waterdrop-apis** 提供的父类 `BaseFilter`
+`BaseStructuredStreamingOutputIntra` 主要为了提供 Spark 现在的 Output 方法支持，而 `BaseStructuredStreamingOutput` 则是为了自定义输出数据源。
 
-1. Scala 实现
-```Scala
-class ScalaSubstring extends BaseFilter {
+`BaseStructuredStreamingOutput` 接口定义如下：
 
-  var config: Config = ConfigFactory.empty()
+```scala
+trait BaseStructuredStreamingOutput extends ForeachWriter[Row] with BaseStructuredStreamingOutputIntra {
 
   /**
-    * Set Config.
-    **/
-  override def setConfig(config: Config): Unit = {
-    this.config = config
-  }
+   * Things to do before process.
+   * */
+  def open(partitionId: Long, epochId: Long): Boolean
 
   /**
-    * Get Config.
-    **/
-  override def getConfig(): Config = {
-    this.config
-  }
-}
-```
-
-2. Java 实现
-```Java
-public class JavaSubstring extends BaseFilter {
-
-    private Config config;
-
-    @Override
-    public Config getConfig() {
-        return config;
-    }
-
-    @Override
-    public void setConfig(Config config) {
-        this.config = config;
-    }
-}
-```
-- 重写父类定义的`checkConfig`、`prepare`和 `process`方法
-1. Scala 实现
-```Scala
-override def checkConfig(): (Boolean, String) = {}
-override def prepare(spark: SparkSession): Unit = {}
-override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
-```
-
-2. Java 实现
-```Java
-@Override
-public Tuple2<Object, String> checkConfig() {}
-@Override
-public void prepare(SparkSession spark, StreamingContext ssc) {}
-@Override
-public Dataset<Row> process(SparkSession spark, Dataset<Row> df) {}
-```
-- **Filter**插件在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用`prepare`方法配置参数的缺省值以及初始化类的成员变量，最后调用`process`方法对 **Dataset[Row]** 格式数据进行处理。
-- Java版本**Filter**插件的实现参照[JavaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/filter/JavaSubstring.java)，Scala版本**Filter**插件的实现参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala)
-
-### Output
-
-- 新建一个类，并继承**Waterdrop-apis**提供的父类`BaseOutput`
-
-1. Scala 实现
-```Scala
-class ScalaStdout extends BaseOutput {
-
-
-  var config: Config = ConfigFactory.empty()
+   * Things to do with each Row.
+   * */
+  def process(row: Row): Unit
 
   /**
-    * Set Config.
-    **/
-  override def setConfig(config: Config): Unit = {
-    this.config = config
-  }
+   * Things to do after process.
+   * */
+  def close(errorOrNull: Throwable): Unit
 
   /**
-    * Get Config.
-    **/
-  override def getConfig(): Config = {
-    this.config
-  }
+   * Waterdrop Structured Streaming process.
+   * */
+  def process(df: Dataset[Row]): DataStreamWriter[Row]
 }
 ```
 
-2. Java 实现
-```Java
-public class JavaStdout extends BaseOutput {
+`BaseStructuredStreamingOutput` 接口功能如下：
 
-    private Config config;
+`open`: 定义处理之前的逻辑
+`process`: 定义每条数据的处理逻辑
+`close`: 定义处理之后的逻辑
+`process`: Waterdrop 内部的处理逻辑，需要返回 **DataStreamWriter[Row]**
 
-    @Override
-    public Config getConfig() {
-        return config;
-    }
+<p align="center">
+    <img src="./docs/imgs/p5.png" width="80">
+</p>
 
-    @Override
-    public void setConfig(Config config) {
-        this.config = config;
-    }
-}
-```
-- 重写父类定义的`checkConfig`、`prepare`和`process`方法
 
-1. Scala 实现
-```Scala
-override def checkConfig(): (Boolean, String) = {}
-override def prepare(spark: SparkSession): Unit = {}
-override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {}
-```
+### 第四步，打包使用
 
-2. Java 实现
-```Java
-@Override
-public Tuple2<Object, String> checkConfig() {}
-@Override
-public void prepare(SparkSession spark) {}
-@Override
-public Dataset<Row> process(SparkSession spark, Dataset<Row> ds) {}
-```
-- **Output** 插件调用结构与 **Filter**插件相似。在调用时会先执行`checkConfig`方法核对调用插件时传入的参数是否正确，然后调用 `prepare` 方法配置参数的缺省值以及初始化类的成员变量，最后调用 `process` 方法将 **Dataset[Row]** 格式数据输出到外部数据源。
-- Java版本**Output**插件的实现参照 [JavaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/java/org/interestinglab/waterdrop/output/JavaStdout.java)，Scala版本 **Output** 插件的实现参照 [ScalaStdout](https://github.com/InterestingLab/waterdrop-filter-example/blob/master/src/main/scala/org/interestinglab/waterdrop/output/ScalaStdout.scala)
-
-### UDF
-
-- 新建一个类，并继承**Waterdrop-apis**提供的父类 `BaseFilter`
-```Scala
-class ScalaSubstring extends BaseFilter {
-
-  var config: Config = ConfigFactory.empty()
-
-  /**
-    * Set Config.
-    **/
-  override def setConfig(config: Config): Unit = {
-    this.config = config
-  }
-
-  /**
-    * Get Config.
-    **/
-  override def getConfig(): Config = {
-    this.config
-  }
-}
-```
-- 重写父类定义的`checkConfig`、`prepare`、`getUdfList`和`process`方法,这里只介绍`getUdfList`以及`process`两个方法
-
-```Scala
-override def getUdfList(): List[(String, UserDefinedFunction)] = {
-  val func = udf((s: String, pos: Int, len: Int) => s.substring(pos, pos+len))
-  List(("my_sub", func))
-}
-override def process(spark: SparkSession, ds: Dataset[Row]): Dataset[Row] = {
-  val srcField = config.getString("source_field")
-  val targetField = config.getString("target_field")
-  val pos = config.getInt("pos")
-  val len = config.getInt("len")
-  val func = getUdfList().get(0)._2
-  df.withColumn(targetField, func(col(srcField), lit(pos), lit(len)))
-}
-```
-
-具体UDF插件开发完整案例参照[ScalaSubstring](https://github.com/InterestingLab/waterdrop-example/blob/rickyhuo.fea.udf/src/main/scala/org/interestinglab/waterdrop/filter/ScalaSubstring.scala#L15)
-
-- 新建 `META-INF/services`
-
-Waterdrop 会利用 **Service Loader** 机制将实现 `io.github.interestinglab.waterdrop.apis.BaseFilter` 的方法根据`getUdfList`返回的方法注册为UDF，如果接口实现类不在services中注明，将不会注册为UDF。
-
-案例中的 [META-INF](https://github.com/InterestingLab/waterdrop-example/blob/master/src/main/resources/META-INF/services/io.github.interestinglab.waterdrop.apis.BaseFilter)
-
-## 三、 打包使用
-
-1. 打包
-
-> mvn package
-
-2. 将打包好的Jar包放到 Waterdrop `plugins`目录下
+1. 编译打包
+2. 将打包后的 Jar 包放到 Waterdrop 指定目录下，以便 Waterdrop 在启动的时候可以加载到。
 
 ```shell
-cd waterdrop-1.1.0
+cd waterdrop
 mkdir -p plugins/my_plugins/lib
 cd plugins/my_plugins/lib
 ```
 
 Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
+
 > plugins/your_plugin_name/lib/your_jar_name
 
 其他文件放到
@@ -319,60 +299,18 @@ Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
 
 3. 在配置文件中使用插件
 
-以下是一个使用第三方插件的完整示例，并将其放至`config/application.conf`
+第三方插件在使用时，**必须使用插件的完整包路径**，例如
 
-由`Fake`插件生成测试数据，进行`Split`进行分割后，使用第三方插件`ScalaSubstring`进行字符串截取，最后使用第三方插件`JavaStdout`打印到终端。
+> org.interestinglab.waterdrop.output.JavaOutput
+
 ```
-spark {
-    spark.streaming.batchDuration = 5
-    spark.app.name = "Waterdrop-sample"
-    spark.ui.port = 13000
-    spark.executor.instances = 2
-    spark.executor.cores = 1
-    spark.executor.memory = "1g"
-}
-
-input {
-    fakeStream {
-        content = ["INFO : gary is 28 years old", "WARN : suwey is 16 years old"]
-        rate = 5
-    }
-}
-
-filter {
-    split {
-        fields = ["log_level", "message"]
-        delimiter = ":"
-    }
-    sql = {
-        table_name = "tmp"
-        # 使用UDF
-        sql = "select log_level, my_sub(message, 1, 3) from tmp"
-    }
-}
-
-output {
+output {                                        
     org.interestinglab.waterdrop.output.JavaStdout {
         limit = 2
     }
 }
 ```
 
-4. 启动Waterdrop
+### 第五步， 启动
 
-```
-./bin/start-waterdrop.sh --config config/application.conf --deploy-mode client --master local[2]
-```
-
-5. 查看结果
-
-```
-+---------+------------------+
-|log_level|UDF(message, 1, 3)|
-+---------+------------------+
-|INFO     |ary               |
-|INFO     |ary               |
-+---------+------------------+
-only showing top 2 rows
-
-```
+至此，我们就完成了一个插件的开发，并且在 Waterdrop 中使用这个插件。

@@ -1,12 +1,11 @@
 package org.interestinglab.waterdrop.output;
 
-import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
+import io.github.interestinglab.waterdrop.config.Config;
+import io.github.interestinglab.waterdrop.config.ConfigFactory;
 import io.github.interestinglab.waterdrop.apis.BaseOutput;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
-import org.apache.spark.streaming.StreamingContext;
 import scala.Tuple2;
 
 import java.util.HashMap;

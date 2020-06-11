@@ -1,6 +1,6 @@
 package org.interestinglab.waterdrop.output
 
-import com.typesafe.config.{Config, ConfigFactory}
+import io.github.interestinglab.waterdrop.config.{Config, ConfigFactory}
 import io.github.interestinglab.waterdrop.apis.BaseOutput
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 

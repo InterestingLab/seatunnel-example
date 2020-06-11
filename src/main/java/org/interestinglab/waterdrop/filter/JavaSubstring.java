@@ -1,6 +1,5 @@
 package org.interestinglab.waterdrop.filter;
 
-import com.typesafe.config.ConfigFactory;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -10,8 +9,9 @@ import static org.apache.spark.sql.functions.col;
 import static org.apache.spark.sql.functions.lit;
 
 import io.github.interestinglab.waterdrop.apis.BaseFilter;
+import io.github.interestinglab.waterdrop.config.Config;
+import io.github.interestinglab.waterdrop.config.ConfigFactory;
 
-import com.typesafe.config.Config;
 import org.apache.spark.sql.api.java.UDF1;
 import org.apache.spark.sql.api.java.UDF3;
 import org.apache.spark.sql.expressions.UserDefinedFunction;

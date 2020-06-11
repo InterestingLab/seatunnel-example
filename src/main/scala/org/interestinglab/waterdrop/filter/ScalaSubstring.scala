@@ -1,7 +1,7 @@
 package org.interestinglab.waterdrop.filter
 
 import io.github.interestinglab.waterdrop.apis.BaseFilter
-import com.typesafe.config.{Config, ConfigFactory}
+import io.github.interestinglab.waterdrop.config.{Config, ConfigFactory}
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import org.apache.spark.sql.functions.{col, udf, lit}

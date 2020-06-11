@@ -12,7 +12,7 @@
         <scala.version>2.11.8</scala.version>
         <scala.binary.version>2.11</scala.binary.version>
         <spark.version>2.2.0</spark.version>
-        <waterdrop.version>1.3.0</waterdrop.version>
+        <waterdrop.version>1.5.0</waterdrop.version>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
@@ -23,9 +23,9 @@
             <version>${waterdrop.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>1.3.1</version>
+            <groupId>io.github.interestinglab.waterdrop</groupId>
+            <artifactId>waterdrop-config_2.11</artifactId>
+            <version>${waterdrop.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
