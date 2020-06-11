@@ -13,6 +13,8 @@ Waterdrop 插件分为3部分，`Input` 、`filter` 和 `output`，这里贴一�
 <p align="center">
     <img src="./docs/imgs/spi.png" width="640">
 </p>
+
+
 ### Input 
 
 `Input` 插件主要负责从外部读取数据并且封装为 `Spark DataSet[Row]` 数据集。插件有三种类型，分别是：
@@ -116,7 +118,7 @@ abstract class BaseStreamingInput[T] extends Plugin {
 总的来说，我们需要定义外部数据源转换为 **DataSet[Row]** 的逻辑。
 
 <p align="center">
-    <img src="./docs/imgs/p1.png" width="80">
+    <img src="./docs/imgs/p1.png" width="100">
 </p>
 
 
@@ -139,7 +141,7 @@ abstract class BaseStaticInput extends Plugin {
 * `getDataset`: 将外部数据源转换为 **DataSet[Row]**
 
 <p align="center">
-    <img src="./docs/imgs/p2.png" width="80">
+    <img src="./docs/imgs/p2.png" width="100">
 </p>
 
 
@@ -186,7 +188,7 @@ abstract class BaseFilter extends Plugin {
 大部分场景我们仅需要实现 `process` 方法定义数据处理逻辑即可。
 
 <p align="center">
-    <img src="./docs/imgs/p3.png" width="80">
+    <img src="./docs/imgs/p3.png" width="100">
 </p>
 
 #### 3. Output
@@ -211,7 +213,7 @@ abstract class BaseOutput extends Plugin {
 `process`: 定义 **Dataset[Row]** 数据输出到外部数据源的方法，需要注意，这里需要触发一个 `action` 操作
 
 <p align="center">
-    <img src="./docs/imgs/p4.png" width="80">
+    <img src="./docs/imgs/p4.png" width="100">
 </p>
 
 
@@ -233,7 +235,7 @@ trait BaseStructuredStreamingOutputIntra extends Plugin {
 `process`: 与 `BaseOutput` 不同的是，这里返回的是 **DataStreamWriter[Row]**。
 
 <p align="center">
-    <img src="./docs/imgs/p5.png" width="80">
+    <img src="./docs/imgs/p5.png" width="100">
 </p>
 
 ##### 3.3 BaseStructuredStreamingOutput
@@ -275,7 +277,7 @@ trait BaseStructuredStreamingOutput extends ForeachWriter[Row] with BaseStructur
 `process`: Waterdrop 内部的处理逻辑，需要返回 **DataStreamWriter[Row]**
 
 <p align="center">
-    <img src="./docs/imgs/p5.png" width="80">
+    <img src="./docs/imgs/p5.png" width="100">
 </p>
 
 
