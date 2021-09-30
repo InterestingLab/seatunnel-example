@@ -1,0 +1,2 @@
+org.interestinglab.waterdrop.output.ScalaStdout
+org.interestinglab.waterdrop.output.JavaStdout
