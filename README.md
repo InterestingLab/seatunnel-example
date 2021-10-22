@@ -1,14 +1,14 @@
-本文面向所有 Waterdrop 插件开发人员，尽可能清晰得阐述开发一个 Waterdrop 插件所经历的过程，希望能消除开发者的困惑。
+本文面向所有 seatunnel 插件开发人员，尽可能清晰得阐述开发一个 seatunnel 插件所经历的过程，希望能消除开发者的困惑。
 
-## Waterdrop 为什么需要插件机制
+## seatunnel 为什么需要插件机制
 
 1. 原生提供插件可能仅能满足80%的需求，还有20%需要你自己来开发
 2. 有了插件机制，开发仅需关注特定插件的处理逻辑，数据处理的共性问题，由框架来统一处理。
 3. 通用插件大大提升了代码的复用率。
 
-## Waterdrop 插件体系介绍
+## seatunnel 插件体系介绍
 
-Waterdrop 插件分为3部分，`Input` 、`filter` 和 `output`，这里贴一个简版类图
+seatunnel 插件分为3部分，`Input` 、`filter` 和 `output`，这里贴一个简版类图
 
 <p align="center">
     <img src="./docs/imgs/spi.png" width="640">
@@ -38,11 +38,11 @@ Waterdrop 插件分为3部分，`Input` 、`filter` 和 `output`，这里贴一�
 
 创建项目或者直接拉取本项目代码
 
-> git clone https://github.com/InterestingLab/waterdrop-example.git
+> git clone https://github.com/InterestingLab/seatunnel-example.git
 
 当你看到这里的，相比这一步不用过多阐述
 
-### 第二步，配置waterdrop-api依赖
+### 第二步，配置seatunnel-api依赖
 
 **sbt**
 ```
@@ -68,7 +68,7 @@ libraryDependencies += "io.github.interestinglab.waterdrop" %% "waterdrop-apis" 
 
 `BaseStreamingInput` 用于实现一个流式处理 `Input` 插件，它支持泛型，用户可以根据实际数据情况指定类型。
 
-需要注意，Waterdrop 中的流式计算插件，类名必须以 **Stream** 结尾，如 `hdfsStream`。
+需要注意，seatunnel 中的流式计算插件，类名必须以 **Stream** 结尾，如 `hdfsStream`。
 
 `BaseStreamingInput` 接口定义如下：
 
@@ -263,7 +263,7 @@ trait BaseStructuredStreamingOutput extends ForeachWriter[Row] with BaseStructur
   def close(errorOrNull: Throwable): Unit
 
   /**
-   * Waterdrop Structured Streaming process.
+   * seatunnel Structured Streaming process.
    * */
   def process(df: Dataset[Row]): DataStreamWriter[Row]
 }
@@ -274,7 +274,7 @@ trait BaseStructuredStreamingOutput extends ForeachWriter[Row] with BaseStructur
 `open`: 定义处理之前的逻辑
 `process`: 定义每条数据的处理逻辑
 `close`: 定义处理之后的逻辑
-`process`: Waterdrop 内部的处理逻辑，需要返回 **DataStreamWriter[Row]**
+`process`: seatunnel 内部的处理逻辑，需要返回 **DataStreamWriter[Row]**
 
 <p align="center">
     <img src="./docs/imgs/p5.png" width="100">
@@ -284,15 +284,15 @@ trait BaseStructuredStreamingOutput extends ForeachWriter[Row] with BaseStructur
 ### 第四步，打包使用
 
 1. 编译打包
-2. 将打包后的 Jar 包放到 Waterdrop 指定目录下，以便 Waterdrop 在启动的时候可以加载到。
+2. 将打包后的 Jar 包放到 seatunnel 指定目录下，以便 seatunnel 在启动的时候可以加载到。
 
 ```shell
-cd waterdrop
+cd seatunnel
 mkdir -p plugins/my_plugins/lib
 cd plugins/my_plugins/lib
 ```
 
-Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
+seatunnel需要将第三方Jar包放到，必须新建**lib**文件夹
 
 > plugins/your_plugin_name/lib/your_jar_name
 
@@ -303,11 +303,11 @@ Waterdrop需要将第三方Jar包放到，必须新建**lib**文件夹
 
 第三方插件在使用时，**必须使用插件的完整包路径**，例如
 
-> org.interestinglab.waterdrop.output.JavaOutput
+> org.interestinglab.seatunnel.output.JavaOutput
 
 ```
 output {                                        
-    org.interestinglab.waterdrop.output.JavaStdout {
+    org.interestinglab.seatunnel.output.JavaStdout {
         limit = 2
     }
 }
@@ -315,4 +315,4 @@ output {
 
 ### 第五步， 启动
 
-至此，我们就完成了一个插件的开发，并且在 Waterdrop 中使用这个插件。
+至此，我们就完成了一个插件的开发，并且在 seatunnel 中使用这个插件。
