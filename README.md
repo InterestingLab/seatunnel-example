@@ -122,9 +122,9 @@ abstract class BaseStreamingInput[T] extends Plugin {
 </p>
 
 
-##### 1.2 BaseStaticFilter
+##### 1.2 BaseStaticInput
 
-`BaseStaticFilter` 用于实现一个静态数据源读取插件，接口定义如下
+`BaseStaticInput` 用于实现一个离线/静态数据源读取插件，接口定义如下
 
 ```
 abstract class BaseStaticInput extends Plugin {
